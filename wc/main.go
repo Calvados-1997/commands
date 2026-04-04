@@ -1,35 +1,78 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
+	"slices"
+	"strings"
+	"unicode"
 )
 
-func check(e error) {
-	if e != nil {
-		fmt.Fprintln(os.Stderr, "wc:", e)
+func main() {
+	args := os.Args[1:]
+	files := slices.DeleteFunc(args, func(f string) bool {
+		return strings.Contains(f, "-")
+	})
+
+	lines, words, bytes := 0, 0, 0
+	buff := make([]byte, 4096)
+	for _, fileName := range files {
+		inWord := false
+
+		f, err := os.Open(fileName)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "wc: ", err)
+			os.Exit(1)
+		}
+
+		for {
+			bytesRead, err := f.Read(buff)
+			if bytesRead > 0 {
+				lines += countLines(buff[:bytesRead])
+				wordCount, isInWord := countWords(buff[:bytesRead], inWord)
+				inWord = isInWord
+				words += wordCount
+				bytes += bytesRead
+			}
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "wc: ", err)
+				os.Exit(1)
+			}
+		}
+		fmt.Printf("%d %d %d %s", lines, words, bytes, fileName)
+		fmt.Println()
+		f.Close()
+	}
+
+	if len(files) > 1 {
+		fmt.Printf("%d %d %d total", lines, words, bytes)
+		fmt.Println()
 	}
 }
 
-func main() {
-	f, err := os.Open("test.txt")
-	check(err)
-	defer f.Close()
+func countLines(data []byte) int {
+	words := string(data)
+	result := strings.Count(words, "\n")
+	return result
+}
 
-	scanner := bufio.NewScanner(f)
-	scanner.Scan()
-	fmt.Println(scanner.Text())
-	// buffer := make([]byte, 4096)
-	// count1, err := f.Read(buffer)
-	// check(err)
+func countWords(data []byte, inWord bool) (int, bool) {
+	wordCount := 0
+	for _, b := range data {
+		letter := rune(b)
+		if unicode.IsSpace(letter) {
+			inWord = false
+			continue
+		}
+		if !inWord {
+			wordCount++
+			inWord = true
+		}
+	}
 
-	// TODO:
-	// 改行文字をカウント
-	// 文字数を読み込むたびにカウント
-	// 読み込んだ総バイト数をカウント
-	// fmt.Printf("%d bytes: %s\n", count1, string(buffer[:count1]))
-	// count2, err := f.Read(buffer)
-	// fmt.Printf("%d bytes: %s\n", count2, string(buffer[:count2]))
-	// check(err)
+	return wordCount, inWord
 }
