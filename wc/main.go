@@ -25,9 +25,6 @@ func init() {
 }
 
 func main() {
-	if parseSuccess := flag.Parsed(); !parseSuccess {
-		fmt.Println("warning: flags have not been parsed.")
-	}
 	files := flag.Args()
 
 	lines, words, bytes, chars := 0, 0, 0, 0
