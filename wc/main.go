@@ -27,7 +27,7 @@ func init() {
 func main() {
 	files := flag.Args()
 
-	lines, words, bytes, chars := 0, 0, 0, 0
+	lines, words, bytes := 0, 0, 0
 	buff := make([]byte, 4096)
 	for _, fileName := range files {
 		inWord := false
