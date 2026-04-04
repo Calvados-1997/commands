@@ -27,38 +27,28 @@ func init() {
 func main() {
 	files := flag.Args()
 
-	lines, words, bytes := 0, 0, 0
+	totalLines, totalWords, totalBytes, totalChars := 0, 0, 0, 0
 	buff := make([]byte, 4096)
 	for _, fileName := range files {
-		inWord := false
+		lines, words, bytes, chars := 0, 0, 0, 0
 
 		f, err := os.Open(fileName)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "wc: ", err)
-			os.Exit(1)
+			continue
 		}
+
+		inWord := false
 
 		for {
 			bytesRead, err := f.Read(buff)
 			if bytesRead > 0 {
-				switch {
-				case countBytesOnly:
-					bytes += bytesRead
-				case countNewLinesOnly:
-					lines += countLines(buff[:bytesRead])
-				case countCharsOnly:
-					chars += countCharacters(buff[:bytesRead])
-				case countWordsOnly:
-					wordCount, isInWord := countWords(buff[:bytesRead], inWord)
-					inWord = isInWord
-					words += wordCount
-				default:
-					lines += countLines(buff[:bytesRead])
-					wordCount, isInWord := countWords(buff[:bytesRead], inWord)
-					inWord = isInWord
-					words += wordCount
-					bytes += bytesRead
-				}
+				lines += countLines(buff[:bytesRead])
+				wordCount, isInWord := countWords(buff[:bytesRead], inWord)
+				inWord = isInWord
+				words += wordCount
+				chars += countCharacters(buff[:bytesRead])
+				bytes += bytesRead
 			}
 			if err == io.EOF {
 				break
@@ -68,12 +58,17 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		fmt.Printf("%d %d %d %s\n", lines, words, bytes, fileName)
+		fmt.Println(formatResult(lines, words, bytes, chars, fileName))
 		f.Close()
+
+		totalLines += lines
+		totalWords += words
+		totalBytes += bytes
+		totalChars += chars
 	}
 
 	if len(files) > 1 {
-		fmt.Printf("%d %d %d total\n", lines, words, bytes)
+		fmt.Println(formatResult(totalLines, totalWords, totalBytes, totalChars, "total"))
 	}
 }
 
@@ -103,4 +98,26 @@ func countWords(data []byte, inWord bool) (int, bool) {
 func countCharacters(data []byte) int {
 	words := string(data)
 	return len([]rune(words))
+}
+
+func formatResult(lines, words, bytes, chars int, lastInfo string) string {
+	cols := []string{}
+
+	noFlags := !countNewLinesOnly && !countWordsOnly && !countBytesOnly && !countCharsOnly
+
+	if noFlags || countNewLinesOnly {
+		cols = append(cols, fmt.Sprintf("%d", lines))
+	}
+	if noFlags || countWordsOnly {
+		cols = append(cols, fmt.Sprintf("%d", words))
+	}
+	if noFlags || countBytesOnly {
+		cols = append(cols, fmt.Sprintf("%d", bytes))
+	}
+	if countCharsOnly {
+		cols = append(cols, fmt.Sprintf("%d", chars))
+	}
+
+	cols = append(cols, lastInfo)
+	return strings.Join(cols, " ")
 }
