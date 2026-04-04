@@ -9,115 +9,132 @@ import (
 	"unicode"
 )
 
-var (
-	countBytesOnly    bool
-	countNewLinesOnly bool
-	countCharsOnly    bool
-	countWordsOnly    bool
-)
+type counts struct {
+	lines int
+	words int
+	bytes int
+	chars int
+}
 
-func init() {
-	flag.BoolVar(&countBytesOnly, "c", false, "Write to the standard output the number of bytes in each input file.")
-	flag.BoolVar(&countNewLinesOnly, "l", false, "Write to the standard output the number of <newline> characters in each input file.")
-	flag.BoolVar(&countCharsOnly, "m", false, "Write to the standard output the number of characters in each input file.")
-	flag.BoolVar(&countWordsOnly, "w", false, "Write to the standard output the number of words in each input file.")
-	flag.Parse()
+func (c *counts) add(other counts) {
+	c.lines += other.lines
+	c.words += other.words
+	c.bytes += other.bytes
+	c.chars += other.chars
+}
+
+type options struct {
+	showLines bool
+	showWords bool
+	showBytes bool
+	showChars bool
+}
+
+func (o options) isDefault() bool {
+	return !o.showLines && !o.showWords && !o.showBytes && !o.showChars
 }
 
 func main() {
+	opts := parseFlags()
 	files := flag.Args()
 
-	totalLines, totalWords, totalBytes, totalChars := 0, 0, 0, 0
-	buff := make([]byte, 4096)
+	var total counts
 	for _, fileName := range files {
-		lines, words, bytes, chars := 0, 0, 0, 0
-
-		f, err := os.Open(fileName)
+		c, err := processFile(fileName)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "wc: ", err)
+			fmt.Fprintln(os.Stderr, "wc:", err)
 			continue
 		}
-
-		inWord := false
-
-		for {
-			bytesRead, err := f.Read(buff)
-			if bytesRead > 0 {
-				lines += countLines(buff[:bytesRead])
-				wordCount, isInWord := countWords(buff[:bytesRead], inWord)
-				inWord = isInWord
-				words += wordCount
-				chars += countCharacters(buff[:bytesRead])
-				bytes += bytesRead
-			}
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				fmt.Fprintln(os.Stderr, "wc: ", err)
-				os.Exit(1)
-			}
-		}
-		fmt.Println(formatResult(lines, words, bytes, chars, fileName))
-		f.Close()
-
-		totalLines += lines
-		totalWords += words
-		totalBytes += bytes
-		totalChars += chars
+		fmt.Println(formatResult(c, opts, fileName))
+		total.add(c)
 	}
 
 	if len(files) > 1 {
-		fmt.Println(formatResult(totalLines, totalWords, totalBytes, totalChars, "total"))
+		fmt.Println(formatResult(total, opts, "total"))
 	}
 }
 
+func parseFlags() options {
+	var opts options
+	flag.BoolVar(&opts.showBytes, "c", false, "Write to the standard output the number of bytes in each input file.")
+	flag.BoolVar(&opts.showLines, "l", false, "Write to the standard output the number of <newline> characters in each input file.")
+	flag.BoolVar(&opts.showChars, "m", false, "Write to the standard output the number of characters in each input file.")
+	flag.BoolVar(&opts.showWords, "w", false, "Write to the standard output the number of words in each input file.")
+	flag.Parse()
+	return opts
+}
+
+func processFile(fileName string) (counts, error) {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return counts{}, err
+	}
+	defer f.Close()
+
+	var c counts
+	var inWord bool
+	buf := make([]byte, 4096)
+
+	for {
+		n, err := f.Read(buf)
+		if n > 0 {
+			chunk := buf[:n]
+			c.lines += countLines(chunk)
+			wc, iw := countWords(chunk, inWord)
+			inWord = iw
+			c.words += wc
+			c.chars += countChars(chunk)
+			c.bytes += n
+		}
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return c, err
+		}
+	}
+	return c, nil
+}
+
 func countLines(data []byte) int {
-	words := string(data)
-	result := strings.Count(words, "\n")
-	return result
+	return strings.Count(string(data), "\n")
 }
 
 func countWords(data []byte, inWord bool) (int, bool) {
-	wordCount := 0
+	n := 0
 	for _, b := range data {
-		letter := rune(b)
-		if unicode.IsSpace(letter) {
+		if unicode.IsSpace(rune(b)) {
 			inWord = false
 			continue
 		}
 		if !inWord {
-			wordCount++
+			n++
 			inWord = true
 		}
 	}
-
-	return wordCount, inWord
+	return n, inWord
 }
 
-func countCharacters(data []byte) int {
-	words := string(data)
-	return len([]rune(words))
+func countChars(data []byte) int {
+	return len([]rune(string(data)))
 }
 
-func formatResult(lines, words, bytes, chars int, lastInfo string) string {
-	cols := []string{}
+func formatResult(c counts, opts options, name string) string {
+	var cols []string
 
-	noFlags := !countNewLinesOnly && !countWordsOnly && !countBytesOnly && !countCharsOnly
-
-	if noFlags || countNewLinesOnly {
-		cols = append(cols, fmt.Sprintf("%d", lines))
+	if opts.isDefault() || opts.showLines {
+		cols = append(cols, fmt.Sprintf("%7d", c.lines))
 	}
-	if noFlags || countWordsOnly {
-		cols = append(cols, fmt.Sprintf("%d", words))
+	if opts.isDefault() || opts.showWords {
+		cols = append(cols, fmt.Sprintf("%7d", c.words))
 	}
-	if noFlags || countBytesOnly {
-		cols = append(cols, fmt.Sprintf("%d", bytes))
+	if opts.isDefault() || opts.showBytes {
+		cols = append(cols, fmt.Sprintf("%7d", c.bytes))
 	}
-	if countCharsOnly {
-		cols = append(cols, fmt.Sprintf("%d", chars))
+	if opts.showChars {
+		cols = append(cols, fmt.Sprintf("%7d", c.chars))
 	}
 
-	cols = append(cols, lastInfo)
+	cols = append(cols, name)
 	return strings.Join(cols, " ")
 }
