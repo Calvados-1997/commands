@@ -43,14 +43,12 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		fmt.Printf("%d %d %d %s", lines, words, bytes, fileName)
-		fmt.Println()
+		fmt.Printf("%d %d %d %s\n", lines, words, bytes, fileName)
 		f.Close()
 	}
 
 	if len(files) > 1 {
-		fmt.Printf("%d %d %d total", lines, words, bytes)
-		fmt.Println()
+		fmt.Printf("%d %d %d total\n", lines, words, bytes)
 	}
 }
 
