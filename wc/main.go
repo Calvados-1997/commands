@@ -1,21 +1,36 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"os"
-	"slices"
 	"strings"
 	"unicode"
 )
 
-func main() {
-	args := os.Args[1:]
-	files := slices.DeleteFunc(args, func(f string) bool {
-		return strings.Contains(f, "-")
-	})
+var (
+	countBytesOnly    bool
+	countNewLinesOnly bool
+	countCharsOnly    bool
+	countWordsOnly    bool
+)
 
-	lines, words, bytes := 0, 0, 0
+func init() {
+	flag.BoolVar(&countBytesOnly, "c", false, "Write to the standard output the number of bytes in each input file.")
+	flag.BoolVar(&countNewLinesOnly, "l", false, "Write to the standard output the number of <newline> characters in each input file.")
+	flag.BoolVar(&countCharsOnly, "m", false, "Write to the standard output the number of characters in each input file.")
+	flag.BoolVar(&countWordsOnly, "w", false, "Write to the standard output the number of words in each input file.")
+	flag.Parse()
+}
+
+func main() {
+	if parseSuccess := flag.Parsed(); !parseSuccess {
+		fmt.Println("warning: flags have not been parsed.")
+	}
+	files := flag.Args()
+
+	lines, words, bytes, chars := 0, 0, 0, 0
 	buff := make([]byte, 4096)
 	for _, fileName := range files {
 		inWord := false
@@ -29,11 +44,24 @@ func main() {
 		for {
 			bytesRead, err := f.Read(buff)
 			if bytesRead > 0 {
-				lines += countLines(buff[:bytesRead])
-				wordCount, isInWord := countWords(buff[:bytesRead], inWord)
-				inWord = isInWord
-				words += wordCount
-				bytes += bytesRead
+				switch {
+				case countBytesOnly:
+					bytes += bytesRead
+				case countNewLinesOnly:
+					lines += countLines(buff[:bytesRead])
+				case countCharsOnly:
+					chars += countCharacters(buff[:bytesRead])
+				case countWordsOnly:
+					wordCount, isInWord := countWords(buff[:bytesRead], inWord)
+					inWord = isInWord
+					words += wordCount
+				default:
+					lines += countLines(buff[:bytesRead])
+					wordCount, isInWord := countWords(buff[:bytesRead], inWord)
+					inWord = isInWord
+					words += wordCount
+					bytes += bytesRead
+				}
 			}
 			if err == io.EOF {
 				break
@@ -43,12 +71,12 @@ func main() {
 				os.Exit(1)
 			}
 		}
-		fmt.Printf("%d %d %d %s\n", lines, words, bytes, fileName)
+		fmt.Printf("%d %d %d %d %s\n", lines, words, bytes, chars, fileName)
 		f.Close()
 	}
 
 	if len(files) > 1 {
-		fmt.Printf("%d %d %d total\n", lines, words, bytes)
+		fmt.Printf("%d %d %d %d total\n", lines, words, bytes, chars)
 	}
 }
 
@@ -73,4 +101,9 @@ func countWords(data []byte, inWord bool) (int, bool) {
 	}
 
 	return wordCount, inWord
+}
+
+func countCharacters(data []byte) int {
+	words := string(data)
+	return len([]rune(words))
 }
