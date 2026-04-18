@@ -36,18 +36,18 @@ func main() {
 	fileNameList := args
 
 	for _, fileName := range fileNameList {
-		rd, err := os.Open(fileName)
+		f, err := os.Open(fileName)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "head: ", err)
 			os.Exit(1)
 		}
 
-		err = processFile(rd, flags)
+		err = processFile(f, flags)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "head: ", err)
 			os.Exit(1)
 		}
-		rd.Close()
+		f.Close()
 	}
 }
 
