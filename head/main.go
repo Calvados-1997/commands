@@ -42,7 +42,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		err = processFile(f, flags)
+		err = processFile(f, os.Stdout, flags)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "head: ", err)
 			os.Exit(1)
@@ -51,21 +51,21 @@ func main() {
 	}
 }
 
-func processFile(rd io.Reader, flags Flags) error {
+func processFile(rd io.Reader, w io.Writer, flags Flags) error {
 	if flags.c != 0 {
 		reader := bufio.NewReader(rd)
 		result, err := readBytes(reader, flags.c)
 		if err != nil {
 			return err
 		}
-		fmt.Print(result)
+		fmt.Fprint(w, result)
 		return nil
 	}
 
 	scanner := bufio.NewScanner(rd)
 	resultLines := readLines(scanner, flags.n)
 	for _, line := range resultLines {
-		fmt.Println(line)
+		fmt.Fprint(w, line)
 	}
 
 	return nil
