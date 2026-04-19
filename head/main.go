@@ -34,6 +34,10 @@ func main() {
 	}
 
 	fileNameList := args
+	if len(fileNameList) == 0 {
+		processFile(os.Stdin, os.Stdout, flags)
+		os.Exit(0)
+	}
 
 	for _, fileName := range fileNameList {
 		f, err := os.Open(fileName)
