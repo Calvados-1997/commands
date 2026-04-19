@@ -65,7 +65,7 @@ func processFile(rd io.Reader, w io.Writer, flags Flags) error {
 	scanner := bufio.NewScanner(rd)
 	resultLines := readLines(scanner, flags.n)
 	for _, line := range resultLines {
-		fmt.Fprint(w, line)
+		fmt.Fprintln(w, line)
 	}
 
 	return nil
