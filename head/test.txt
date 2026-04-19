@@ -1,0 +1,2 @@
+By default, the standard output shall contain an entry for each input file of the form:
+If the -m option is specified, the number of characters shall replace the <bytes> field in this format.
