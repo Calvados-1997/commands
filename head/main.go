@@ -39,11 +39,18 @@ func main() {
 		os.Exit(0)
 	}
 
-	for _, fileName := range fileNameList {
+	for i, fileName := range fileNameList {
 		f, err := os.Open(fileName)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "head: ", err)
 			os.Exit(1)
+		}
+
+		if len(fileNameList) > 1 {
+			if i > 0 {
+				fmt.Fprintln(os.Stdout)
+			}
+			fmt.Fprintf(os.Stdout, "==> %s <==\n", fileName)
 		}
 
 		err = processFile(f, os.Stdout, flags)
