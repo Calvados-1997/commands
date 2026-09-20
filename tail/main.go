@@ -32,7 +32,7 @@ func main() {
 	_, err = f.Seek(int64(start), io.SeekStart)
 
 	rbyte, err := f.Read(buf)
-	if err != nil {
+	if err != nil && err != io.EOF {
 		fmt.Fprintln(os.Stderr, "read failed:", err)
 		os.Exit(1)
 	}
