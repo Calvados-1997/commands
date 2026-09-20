@@ -29,6 +29,7 @@ func main() {
 	buf := make([]byte, options.BlockSize)
 	start := math.Max(0, float64(fSize)-float64(len(buf)))
 
+	// ファイル内容の読み込み位置を指定
 	_, err = f.Seek(int64(start), io.SeekStart)
 
 	rbyte, err := f.Read(buf)
