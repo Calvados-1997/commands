@@ -8,7 +8,7 @@ import (
 )
 
 type TailOptions struct {
-	Lines     int
+	readLines int
 	BlockSize int
 }
 
@@ -21,7 +21,7 @@ func main() {
 	defer f.Close()
 
 	options := TailOptions{
-		Lines:     10,
+		readLines: 10,
 		BlockSize: 1024,
 	}
 	fInfo, err := f.Stat()
@@ -40,9 +40,9 @@ func main() {
 	// 逆から走査する
 	for index := rbyte - 1; index >= 0; index-- {
 		if buf[index] == '\n' {
-			options.Lines--
+			options.readLines--
 		}
-		if options.Lines < 0 {
+		if options.readLines < 0 {
 			off := int64(start) + int64(index) + 1
 			_, err = f.Seek(off, io.SeekStart)
 			if err != nil {
