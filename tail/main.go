@@ -21,6 +21,7 @@ func main() {
 	args := os.Args
 	files := args[1:]
 	for _, fileName := range files {
+		fmt.Printf("==> %s <==\n", fileName)
 		targetPath, err := filepath.Abs(fileName)
 		err = checkError(os.Stderr, "could not resolve file path:", err)
 		if err != nil {
