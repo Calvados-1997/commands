@@ -27,7 +27,7 @@ func main() {
 	fInfo, err := f.Stat()
 	fSize := fInfo.Size()
 	buf := make([]byte, options.BlockSize)
-	start := math.Max(0, float64(fSize)-float64(len(buf)))
+	start := computeStart(fSize, buf)
 
 	// ファイル内容の読み込み位置を指定
 	_, err = f.Seek(int64(start), io.SeekStart)
@@ -57,4 +57,9 @@ func main() {
 			return
 		}
 	}
+}
+
+func computeStart(size int64, buff []byte) int64 {
+	start := math.Max(0, float64(size)-float64(len(buff)))
+	return int64(start)
 }
